@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<style>
+/* Playback controls on top; the cortex, playing one series (or every series, in rows or a grid), beside (or
+   above) the chosen parcel's series. */
+:root {
+  --bg: #f4f5f2; --panel: #ffffff; --ink: #1a1d1f; --ink-2: #4f5458; --muted: #868b8f; --rule: #dfe1dc;
+  --accent: #2a78d6; --neg: #2a78d6; --mid: #ecebe6; --pos: #e34948; --wall: #b9bab4; --nodata: #8e908a;
+  --seq-lo: #e6e3f6; --seq-mid: #8b80dd; --seq-hi: #2f2575;
+  --hue-lo: #b3aaeb; --hue-mid: #8b80dd; --hue-hi: #2f2575;
+  --c1: #2a78d6; --c2: #eb6834; --c3: #1baf7a; --c4: #eda100; --c5: #e87ba4; --c6: #008300; --c7: #4a3aa7; --c8: #e34948;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111416; --panel: #191d20; --ink: #eceeee; --ink-2: #b4b9bc; --muted: #7f868b; --rule: #2a3034;
+    --accent: #5b9df0; --neg: #3987e5; --mid: #33383c; --pos: #e66767; --wall: #24282b; --nodata: #4b5054;
+    --seq-lo: #2b2842; --seq-mid: #6a5fc4; --seq-hi: #cac3f7;
+    --hue-lo: #4d459b; --hue-mid: #8b80dd; --hue-hi: #cac3f7;
+    --c1: #3987e5; --c2: #d95926; --c3: #199e70; --c4: #c98500; --c5: #d55181; --c6: #008300; --c7: #9085e9; --c8: #e66767;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111416; --panel: #191d20; --ink: #eceeee; --ink-2: #b4b9bc; --muted: #7f868b; --rule: #2a3034;
+  --accent: #5b9df0; --neg: #3987e5; --mid: #33383c; --pos: #e66767; --wall: #24282b; --nodata: #4b5054;
+  --seq-lo: #2b2842; --seq-mid: #6a5fc4; --seq-hi: #cac3f7;
+  --hue-lo: #4d459b; --hue-mid: #8b80dd; --hue-hi: #cac3f7;
+  --c1: #3987e5; --c2: #d95926; --c3: #199e70; --c4: #c98500; --c5: #d55181; --c6: #008300; --c7: #9085e9; --c8: #e66767;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--font); }
+.app { max-width: 1320px; margin: 0 auto; padding: 20px 20px 32px; display: grid; gap: 16px; }
+header { display: grid; gap: 4px; }
+h1 { font-size: 1.55rem; font-weight: 650; letter-spacing: -.01em; margin: 0; text-wrap: balance; }
+.sub { color: var(--ink-2); margin: 0; max-width: 75ch; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.group.grow { flex: 1 1 260px; flex-wrap: nowrap; }
+.lab { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-right: 2px; white-space: nowrap; }
+button, select {
+  font: 500 .85rem var(--font); color: var(--ink); background: var(--panel); border: 1px solid var(--rule);
+  border-radius: 6px; padding: 5px 10px; cursor: pointer; max-width: 100%;
+}
+button[aria-pressed="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+button:hover, select:hover { border-color: var(--muted); }
+button:focus-visible, select:focus-visible, canvas:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button:disabled { opacity: .5; cursor: default; }
+#play { min-width: 5.2em; }
+.seg { display: inline-flex; flex-wrap: wrap; }
+.seg button { border-radius: 0; margin-left: -1px; padding-inline: 8px; }
+.seg button:first-child { border-radius: 6px 0 0 6px; margin-left: 0; }
+.seg button:last-child { border-radius: 0 6px 6px 0; }
+#time { flex: 1; min-width: 120px; accent-color: var(--ink); }
+.clock { font-size: .82rem; color: var(--ink-2); white-space: nowrap; }
+.stage { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (min-width: 1000px) {
+  .stage { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .stage.rows, .stage.grid { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+  .stage.grid > :last-child { position: sticky; top: 16px; }  /* the plot stays in view while the grid scrolls */
+}
+.panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 14px; display: grid; gap: 10px; min-width: 0; }
+.panel h2 { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; margin: 0; }
+.phead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.phead h2 { margin-right: auto; }
+.hint { font-size: .82rem; color: var(--ink-2); margin: 0; max-width: 90ch; }
+.err { color: var(--pos); }
+.brainwrap { position: relative; width: 100%; height: 300px; }
+#brain { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: pointer; touch-action: manipulation; }
+.views { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; pointer-events: none; }
+.views span { font-size: .72rem; color: var(--muted); padding: 4px 6px; letter-spacing: .04em; }
+.views span.row { grid-column: 1 / -1; padding: 2px 6px; line-height: 16px; color: var(--ink-2); font-weight: 600; white-space: nowrap; }
+.views span.row + span.row { border-top: 1px solid var(--rule); }
+.views span.cell { padding: 2px 4px; line-height: 16px; color: var(--ink-2); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.views span.focus { outline: 2px solid var(--ink-2); outline-offset: -2px; border-radius: 4px; }
+.views .swatch { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+.huekey { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: .8rem; color: var(--ink-2); }
+.huekey .bar { flex: 0 1 160px; min-width: 60px; background: linear-gradient(90deg, var(--hue-lo), var(--hue-mid), var(--hue-hi)); }
+.viewnames { display: grid; grid-template-columns: repeat(4, 1fr); font-size: .72rem; color: var(--muted); letter-spacing: .04em; }
+.viewnames span { padding-inline: 6px; }
+.scale { display: grid; grid-template-columns: auto minmax(60px, 1fr) auto; gap: 4px 10px; align-items: center; font-size: .8rem; color: var(--ink-2); }
+.bar { height: 10px; border-radius: 3px; background: linear-gradient(90deg, var(--neg), var(--mid), var(--pos)); }
+.bar.seq { background: linear-gradient(90deg, var(--seq-lo), var(--seq-mid), var(--seq-hi)); }
+.scale .unit { grid-column: 1 / -1; color: var(--muted); }
+.toggles { display: flex; flex-wrap: wrap; gap: 6px; }
+.toggle { display: inline-flex; align-items: center; gap: 7px; font-weight: 500; }
+.toggle[aria-pressed="true"] { background: var(--panel); color: var(--ink); border-color: var(--ink-2); }
+.toggle[aria-pressed="false"] { color: var(--muted); }
+.toggle .key { width: 14px; height: 2px; border-radius: 1px; flex: none; }
+.toggle[aria-pressed="false"] .key { opacity: .3; }
+#series { width: 100%; height: 260px; display: block; cursor: crosshair; touch-action: pan-y; }
+@media (max-width: 560px) { .app { padding-inline: 16px; } }
+</style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <h1 id="title"></h1>
+    <p class="sub" id="description" hidden></p>
+  </header>
+
+  <div class="controls" role="toolbar" aria-label="Playback">
+    <div class="group"><button id="play" aria-pressed="false">Play</button><button id="loop" aria-pressed="true">Loop</button></div>
+    <div class="group"><span class="lab" id="speedLab">Speed</span><span class="seg" id="speed" role="group" aria-labelledby="speedLab"></span></div>
+    <div class="group"><label class="lab" for="interp">Interpolation</label><select id="interp">
+      <option value="lanczos">Lanczos (smooth)</option><option value="linear">Linear</option><option value="nearest">Nearest sample</option></select></div>
+    <div class="group grow"><label class="lab" for="time">Time</label><input type="range" id="time" min="0" max="1" step="any" value="0"><span class="mono clock" id="clock" aria-live="off"></span></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <section class="panel" aria-label="Cortex">
+      <div class="phead" id="showRow"><label class="lab" for="show">Cortex shows</label><select id="show"></select></div>
+      <div class="phead" id="viewRow" hidden><span class="lab" id="viewLab">View</span><span class="seg" id="viewPick" role="group" aria-labelledby="viewLab"></span></div>
+      <div class="viewnames" id="viewnames" hidden><span>Left lateral</span><span>Right lateral</span><span>Left medial</span><span>Right medial</span></div>
+      <div class="brainwrap" id="brainwrap">
+        <canvas id="brain" aria-label="Cortical surface in four views: left and right lateral, then left and right medial. Click a parcel to plot its series."></canvas>
+        <div class="views" id="views"><span>Left lateral</span><span>Right lateral</span><span>Left medial</span><span>Right medial</span></div>
+      </div>
+      <div class="scale"><span class="mono" id="lo"></span><div class="bar" id="bar"></div><span class="mono" id="hi"></span><span class="unit" id="unit"></span></div>
+      <p class="hint mono" id="hover"></p>
+      <p class="hint err" id="brainNote" hidden></p>
+    </section>
+
+    <section class="panel" aria-label="Series of the chosen parcel">
+      <div class="phead"><h2 id="seriesTitle"></h2>
+        <span class="group"><label class="lab" for="parcel">Parcel</label><select id="parcel"></select></span></div>
+      <div class="phead" id="plotRow"><span class="lab" id="plotLab">Plot</span><span class="toggles" id="plot" role="group" aria-labelledby="plotLab"></span></div>
+      <div class="huekey" id="huekey" hidden><span class="lab" id="hueLab"></span><span class="mono" id="hueLo"></span><div class="bar"></div><span class="mono" id="hueHi"></span></div>
+      <canvas id="series" aria-label="Series of the chosen parcel"></canvas>
+      <p class="hint mono" id="readout"></p>
+    </section>
+  </div>
+  <p class="hint">Space plays or pauses. The arrow keys step one sample, or ten with Shift.</p>
+  <p class="hint err" id="errors" hidden></p>
+</main>
+<script type="application/json" id="pv-data">__DATA__</script>
+<script>
+"use strict";
+window.addEventListener('error', ev => {
+  const el = document.getElementById('errors');
+  el.hidden = false; el.textContent = `Something went wrong: ${ev.message}`;
+});
+const D = JSON.parse(document.getElementById('pv-data').textContent);
+const $ = id => document.getElementById(id);
+const TYPES = { float32: Float32Array, int16: Int16Array, int32: Int32Array, uint16: Uint16Array, uint32: Uint32Array };
+function decode(s, T) {
+  const bin = atob(s), u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  return new T(u8.buffer);
+}
+
+// ---------- data ----------
+const R = D.parcels.names.length, LABELS = D.parcels.labels, GROUPS = D.parcels.groups, DRAWN = D.parcels.drawn;
+const SIG = D.signals.map((s, i) => ({ ...s, data: decode(s.data, Float32Array), color: `--c${i + 1}`, index: i, hue: D.hue ? D.hue.values[i] : null }));
+const VALS = SIG.map(() => new Float32Array(R));  // every series at the current time, all parcels
+// Whether the cortex draws every series rather than the one chosen: in rows of four views, or a grid of one view each
+const ALL = D.cortex !== 'one', ROWS = D.cortex === 'rows', GRID = D.cortex === 'grid';
+const OVERLAY = D.plots === 'overlay';  // the chosen parcel's series on one axis, rather than a row each
+const VIEWS = [{ hemi: 0, side: -1, name: 'Left lateral' }, { hemi: 1, side: 1, name: 'Right lateral' },
+               { hemi: 0, side: 1, name: 'Left medial' }, { hemi: 1, side: -1, name: 'Right medial' }];
+// Series drawn together that share one colour range share one scale; otherwise each range goes beside its name
+const SHARED = SIG.every(s => s.cmap === SIG[0].cmap && s.unit === SIG[0].unit && s.limits[0] === SIG[0].limits[0] && s.limits[1] === SIG[0].limits[1]);
+const T0 = Math.min(...SIG.map(s => s.start)), T1 = Math.max(...SIG.map(s => s.start + (s.n - 1) * s.tr));
+const DUR = T1 - T0, STEP = Math.min(...SIG.map(s => s.tr));
+const WINDOW = Math.min(D.window, Math.max(DUR, STEP));
+
+// ---------- theme ----------
+let tokens = {};
+const token = name => tokens[name] ??= getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+function rgb(hex) {
+  let h = hex.replace('#', '');
+  if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
+}
+const MINUS = '−';
+function fmt(v, digits = 3) {
+  if (!Number.isFinite(v)) return 'no data';
+  const a = Math.abs(v);
+  return (a !== 0 && (a >= 1e5 || a < 1e-3) ? v.toExponential(digits - 1) : v.toPrecision(digits)).replace('-', MINUS);
+}
+const fmtAxis = (v, span) => v.toFixed(Math.max(0, Math.min(6, 2 - Math.floor(Math.log10(Math.max(span, 1e-12)))))).replace('-', MINUS);
+const withUnit = (v, unit) => fmt(v) + (unit && Number.isFinite(v) ? ` ${unit}` : '');
+// Line colours: by hue on a light-to-dark scale when given; otherwise a colour per series, or one for all in an overlay
+const HUE = D.hue && { label: D.hue.label, lo: Math.min(...D.hue.values), hi: Math.max(...D.hue.values) };
+function hueColor(v) {  // through three stops, linear in sRGB like the legend's gradient
+  const u = HUE.hi > HUE.lo ? (v - HUE.lo) / (HUE.hi - HUE.lo) : .5, [a, m, b] = ['--hue-lo', '--hue-mid', '--hue-hi'].map(n => rgb(token(n)));
+  const [p, q, f] = u < .5 ? [a, m, u * 2] : [m, b, u * 2 - 1];
+  return `rgb(${p.map((x, k) => Math.round(255 * (x + (q[k] - x) * f))).join(' ')})`;
+}
+const lineColor = s => HUE ? hueColor(s.hue) : OVERLAY ? token('--ink-2') : token(s.color);
+
+// ---------- state ----------
+const params = new URLSearchParams(location.hash.slice(1));
+const state = {
+  t: T0, playing: !matchMedia('(prefers-reduced-motion: reduce)').matches && DUR > 0, speed: D.speed, loop: D.loop,
+  interp: D.interpolation, show: 0, view: 0, parcel: D.selected, plotted: new Set(D.plot), hover: null, seriesHover: null,
+  near: null, dirty: true,
+};
+if (params.has('t')) state.t = Math.min(T1, Math.max(T0, T0 + (+params.get('t') || 0)));
+if (params.has('paused')) state.playing = false;
+if (params.has('show') && SIG[+params.get('show')]) state.show = +params.get('show');
+if (params.has('view') && VIEWS[+params.get('view')]) state.view = +params.get('view');
+if (params.has('parcel') && +params.get('parcel') >= 0 && +params.get('parcel') < R) state.parcel = +params.get('parcel');
+if (['lanczos', 'linear', 'nearest'].includes(params.get('interp'))) state.interp = params.get('interp');
+
+// ---------- sampling: a series' value at any time, under the chosen interpolation ----------
+function lanczos(u) {  // Lanczos-3 kernel: a windowed sinc, close to band-limited interpolation
+  if (Math.abs(u) < 1e-9) return 1;
+  if (Math.abs(u) >= 3) return 0;
+  const a = Math.PI * u;
+  return 3 * Math.sin(a) * Math.sin(a / 3) / (a * a);
+}
+const KW = new Float64Array(6), KO = new Int32Array(6);
+function kernel(s, t) {  // offsets (sample * R) and weights for time t; returns how many, 0 outside the samples
+  const u = (t - s.start) / s.tr, n = s.n, clamp = k => Math.min(n - 1, Math.max(0, k));
+  if (!(u > -1e-6 && u < n - 1 + 1e-6)) return 0;
+  if (state.interp === 'nearest' || n === 1) { KO[0] = clamp(Math.round(u)) * R; KW[0] = 1; return 1; }
+  if (state.interp === 'linear') {
+    const k = Math.min(n - 2, Math.max(0, Math.floor(u))), f = Math.min(1, Math.max(0, u - k));
+    KO[0] = k * R; KW[0] = 1 - f; KO[1] = (k + 1) * R; KW[1] = f;
+    return 2;
+  }
+  // Lanczos-3 through the six nearest samples, the edge samples repeated beyond the ends
+  const k0 = Math.floor(u);
+  for (let j = 0; j < 6; j++) { const k = k0 - 2 + j; KW[j] = lanczos(u - k); KO[j] = clamp(k) * R; }
+  return 6;
+}
+function apply(s, m, r) {  // missing samples are left out and the weights renormalised
+  let v = 0, w = 0;
+  for (let j = 0; j < m; j++) {
+    const wj = KW[j];
+    if (wj === 0) continue;
+    const x = s.data[KO[j] + r];
+    if (x === x) { v += wj * x; w += wj; }
+  }
+  return Math.abs(w) > 1e-3 ? v / w : NaN;
+}
+function valueAt(s, r, t) { const m = kernel(s, t); return m ? apply(s, m, r) : NaN; }
+function sampleAll(s, t, out) {
+  const m = kernel(s, t);
+  if (!m) { out.fill(NaN); return; }
+  for (let r = 0; r < R; r++) out[r] = apply(s, m, r);
+}
+const sampleTime = (s, k) => s.start + k * s.tr;
+function visible(s, t0, t1) {  // samples in [t0, t1], with one before so lines enter from the edge
+  return [Math.max(0, Math.ceil((t0 - s.start) / s.tr - 1e-9) - 1), Math.min(s.n - 1, Math.floor((t1 - s.start) / s.tr + 1e-9))];
+}
+
+// ---------- controls ----------
+$('title').textContent = D.title;
+document.title = D.title;
+if (D.description) { $('description').textContent = D.description; $('description').hidden = false; }
+
+function setPlaying(on) {
+  if (on && state.t >= T1 - 1e-9) state.t = T0;  // play from the start once at the end
+  state.playing = on && DUR > 0;
+  $('play').textContent = state.playing ? 'Pause' : 'Play';
+  $('play').setAttribute('aria-pressed', String(state.playing));
+  state.dirty = true;
+}
+$('play').addEventListener('click', () => setPlaying(!state.playing));
+$('play').disabled = !(DUR > 0);
+$('loop').setAttribute('aria-pressed', String(state.loop));
+$('loop').addEventListener('click', () => { state.loop = !state.loop; $('loop').setAttribute('aria-pressed', String(state.loop)); });
+
+const SPEEDS = [...new Set([0.25, 0.5, 1, 2, 4, 8, 16, D.speed])].sort((a, b) => a - b);
+SPEEDS.forEach(v => {
+  const b = document.createElement('button');
+  b.textContent = `${v}×`; b.dataset.v = v; b.setAttribute('aria-pressed', String(v === state.speed));
+  b.addEventListener('click', () => {
+    state.speed = v;
+    $('speed').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(+x.dataset.v === v)));
+  });
+  $('speed').appendChild(b);
+});
+
+$('interp').value = state.interp;
+$('interp').addEventListener('change', ev => { state.interp = ev.target.value; state.dirty = true; });
+
+SIG.forEach(s => { const o = document.createElement('option'); o.value = s.index; o.textContent = s.name; $('show').appendChild(o); });
+$('show').value = state.show;
+$('show').addEventListener('change', ev => { state.show = +ev.target.value; updateScale(); state.dirty = true; });
+const SWATCHES = [];  // [element, series]: keys coloured as the series' line
+if (ALL) {  // each series' name over its row or cell, keyed by its line's colour; in rows, view names once above the columns
+  $('stage').classList.add(D.cortex); $('showRow').hidden = true; $('viewnames').hidden = !ROWS; $('viewRow').hidden = !GRID;
+  $('views').replaceChildren(...SIG.map(s => {
+    const el = document.createElement('span');
+    el.className = ROWS ? 'row' : 'cell';
+    if (HUE || !OVERLAY) { const sw = document.createElement('span'); sw.className = 'swatch'; el.append(sw); SWATCHES.push([sw, s]); }
+    el.append(SHARED ? s.name : `${s.name} · ${fmt(s.limits[0])} to ${withUnit(s.limits[1], s.unit)}`);
+    return el;
+  }));
+  $('brain').setAttribute('aria-label', ROWS
+    ? 'Cortical surface, one row per series, each in four views: left and right lateral, then left and right medial. Click a parcel to plot its series.'
+    : 'Cortical surface, one view of every series, in a grid. Click a parcel to plot its series.');
+}
+if (GRID) VIEWS.forEach((v, i) => {  // which view the grid draws
+  const b = document.createElement('button');
+  b.textContent = v.name; b.setAttribute('aria-pressed', String(i === state.view));
+  b.addEventListener('click', () => {
+    state.view = i; state.hover = null; state.dirty = true;
+    $('viewPick').querySelectorAll('button').forEach((x, k) => x.setAttribute('aria-pressed', String(k === i)));
+  });
+  $('viewPick').appendChild(b);
+});
+
+const slider = $('time');
+slider.min = T0; slider.max = T1; slider.step = 'any'; slider.disabled = !(DUR > 0);
+let resume = false;
+slider.addEventListener('pointerdown', () => { resume = state.playing; if (resume) setPlaying(false); });
+slider.addEventListener('input', () => { state.t = +slider.value; state.dirty = true; });
+slider.addEventListener('change', () => { if (resume) { resume = false; setPlaying(true); } });
+const fmtClock = t => `${(t - T0).toFixed(1)} s`;
+
+function selectParcel(r) {
+  state.parcel = r; $('parcel').value = r; state.dirty = true;
+  $('seriesTitle').textContent = LABELS[r] + (GROUPS && GROUPS[r] ? ` · ${GROUPS[r]}` : '');
+}
+{
+  // The menu: by group when there are groups, parcels that are not on the surface last
+  const sections = new Map();
+  for (let r = 0; r < R; r++) {
+    const key = !DRAWN[r] ? '\u0000off' : GROUPS ? GROUPS[r] : '';
+    if (!sections.has(key)) sections.set(key, []);
+    sections.get(key).push(r);
+  }
+  const keys = [...sections.keys()].filter(k => k !== '\u0000off');
+  if (sections.has('\u0000off')) keys.push('\u0000off');
+  for (const key of keys) {
+    const parent = keys.length > 1 || key === '\u0000off' ? document.createElement('optgroup') : $('parcel');
+    if (parent !== $('parcel')) { parent.label = key === '\u0000off' ? 'Not on the cortical surface' : key || 'Other'; $('parcel').appendChild(parent); }
+    for (const r of sections.get(key)) { const o = document.createElement('option'); o.value = r; o.textContent = LABELS[r]; parent.appendChild(o); }
+  }
+  $('parcel').addEventListener('change', ev => selectParcel(+ev.target.value));
+}
+
+// Which series to plot: one toggle each, coloured as its line
+SIG.forEach(s => {
+  const b = document.createElement('button'), key = document.createElement('span');
+  b.className = 'toggle'; b.setAttribute('aria-pressed', String(state.plotted.has(s.index)));
+  key.className = 'key'; SWATCHES.push([key, s]);
+  b.append(key, document.createTextNode(s.name));
+  b.addEventListener('click', () => {
+    state.plotted.has(s.index) ? state.plotted.delete(s.index) : state.plotted.add(s.index);
+    b.setAttribute('aria-pressed', String(state.plotted.has(s.index)));
+    state.dirty = true;
+  });
+  $('plot').appendChild(b);
+});
+$('plotRow').hidden = OVERLAY;
+if (HUE) { $('huekey').hidden = false; $('hueLab').textContent = HUE.label || 'Colour'; $('hueLo').textContent = fmtAxis(HUE.lo, HUE.hi - HUE.lo); $('hueHi').textContent = fmtAxis(HUE.hi, HUE.hi - HUE.lo); }
+function paintKeys() { for (const [el, s] of SWATCHES) el.style.background = lineColor(s); }
+
+document.addEventListener('keydown', ev => {
+  if (ev.ctrlKey || ev.metaKey || ev.altKey || ev.target.closest('input, select, textarea, button')) return;
+  if (ev.key === ' ') { ev.preventDefault(); setPlaying(!state.playing); }
+  else if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight') {
+    ev.preventDefault(); setPlaying(false);
+    state.t = Math.min(T1, Math.max(T0, state.t + (ev.key === 'ArrowLeft' ? -1 : 1) * STEP * (ev.shiftKey ? 10 : 1)));
+    state.dirty = true;
+  }
+});
+
+function updateScale() {
+  const s = SIG[ALL ? 0 : state.show], [lo, hi] = s.limits, own = ALL && !SHARED;
+  const cmaps = new Set((ALL ? SIG : [s]).map(x => x.cmap));
+  $('lo').textContent = own ? '' : withUnit(lo, s.unit); $('hi').textContent = own ? '' : withUnit(hi, s.unit);
+  $('bar').className = s.cmap === 'sequential' ? 'bar seq' : 'bar'; $('bar').hidden = cmaps.size > 1;
+  const what = own ? 'Each range is beside its series’ name' : `${ALL ? 'All series' : s.name}${s.unit ? ` (${s.unit})` : ''}`;
+  $('unit').textContent = `${what}${cmaps.size === 1 && s.cmap === 'diverging' ? ', gray at 0' : ''}; values beyond the range take the end colours`;
+}
+
+// ---------- cortex (WebGL 2) ----------
+// What each viewport draws: a view (null: the one chosen for the grid) of a series (null: the one chosen to show)
+const CELLS = ROWS ? SIG.flatMap(s => VIEWS.map(v => ({ v, s: s.index }))) : GRID ? SIG.map(s => ({ v: null, s: s.index }))
+  : VIEWS.map(v => ({ v, s: null }));
+const cellSignal = c => c.s ?? state.show, cellView = c => c.v ?? VIEWS[state.view];
+const VS = `#version 300 es
+precision highp float;
+precision highp int;
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec3 aNormal;
+layout(location = 2) in int aParcel;
+layout(location = 3) in float aEdge;
+uniform mat4 uMVP;
+uniform vec3 uDir;
+uniform highp sampler2D uValues;
+uniform mediump sampler2D uLut;
+uniform int uTexW;
+uniform int uRow;
+uniform vec2 uRange;
+uniform vec3 uWall;
+uniform vec3 uNoData;
+uniform int uSelected;
+uniform vec3 uInk;
+out vec3 vColor;
+void main() {
+  gl_Position = uMVP * vec4(aPos, 1.0);
+  vec3 c = uWall;
+  if (aParcel >= 0) {
+    float v = texelFetch(uValues, ivec2(aParcel % uTexW, aParcel / uTexW + uRow), 0).r;
+    float u = clamp((v - uRange.x) / (uRange.y - uRange.x), 0.0, 1.0);
+    c = v > 1e29 ? uNoData : textureLod(uLut, vec2((u * 255.0 + 0.5) / 256.0, 0.5), 0.0).rgb;
+  }
+  vColor = c * (0.62 + 0.5 * abs(dot(aNormal, uDir)));  // ambient and a light at the camera
+  if (aParcel == uSelected && aEdge > 0.5) vColor = uInk;  // outline the chosen parcel
+}`;
+const FS = `#version 300 es
+precision mediump float;
+in vec3 vColor;
+out vec4 outColor;
+void main() { outColor = vec4(min(vColor, 1.0), 1.0); }`;
+const PICK_VS = `#version 300 es
+precision highp float;
+precision highp int;
+layout(location = 0) in vec3 aPos;
+layout(location = 2) in int aParcel;
+uniform mat4 uMVP;
+flat out int vParcel;
+void main() { gl_Position = uMVP * vec4(aPos, 1.0); vParcel = aParcel; }`;
+const PICK_FS = `#version 300 es
+precision highp float;
+precision highp int;
+flat in int vParcel;
+out vec4 outColor;
+void main() {
+  int id = vParcel + 2;  // 0: background, 1: unlabelled vertex
+  outColor = vec4(float(id & 255), float((id >> 8) & 255), float((id >> 16) & 255), 255.0) / 255.0;
+}`;
+const brain = { gl: null };
+function program(gl, vs, fs) {
+  const p = gl.createProgram();
+  for (const [type, src] of [[gl.VERTEX_SHADER, vs], [gl.FRAGMENT_SHADER, fs]]) {
+    const sh = gl.createShader(type);
+    gl.shaderSource(sh, src); gl.compileShader(sh);
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh));
+    gl.attachShader(p, sh);
+  }
+  gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  const u = {};
+  for (let i = 0; i < gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS); i++) {
+    const name = gl.getActiveUniform(p, i).name; u[name] = gl.getUniformLocation(p, name);
+  }
+  return { p, u };
+}
+function vertexNormals(p, f) {  // area-weighted, unit length
+  const n = new Float32Array(p.length);
+  for (let i = 0; i < f.length; i += 3) {
+    const a = 3 * f[i], b = 3 * f[i + 1], c = 3 * f[i + 2];
+    const ux = p[b] - p[a], uy = p[b + 1] - p[a + 1], uz = p[b + 2] - p[a + 2];
+    const vx = p[c] - p[a], vy = p[c + 1] - p[a + 1], vz = p[c + 2] - p[a + 2];
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    n[a] += nx; n[a + 1] += ny; n[a + 2] += nz; n[b] += nx; n[b + 1] += ny; n[b + 2] += nz; n[c] += nx; n[c + 1] += ny; n[c + 2] += nz;
+  }
+  for (let i = 0; i < n.length; i += 3) {
+    const l = Math.hypot(n[i], n[i + 1], n[i + 2]);
+    if (l > 0) { n[i] /= l; n[i + 1] /= l; n[i + 2] /= l; } else n[i + 2] = 1;
+  }
+  return n;
+}
+function parcelEdges(par, f) {  // 1 for vertices of a triangle that spans two parcels
+  const e = new Float32Array(par.length);
+  for (let i = 0; i < f.length; i += 3) {
+    const a = f[i], b = f[i + 1], c = f[i + 2];
+    if (par[a] !== par[b] || par[a] !== par[c]) e[a] = e[b] = e[c] = 1;
+  }
+  return e;
+}
+function bounds(p) {
+  const b = [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < p.length; i += 3) for (let k = 0; k < 3; k++) { b[k] = Math.min(b[k], p[i + k]); b[k + 3] = Math.max(b[k + 3], p[i + k]); }
+  return b;
+}
+function lutTexture(gl, tex, names) {  // 256 colours through three stops, linear in sRGB
+  const [a, m, b] = names.map(n => rgb(token(n))), px = new Uint8Array(256 * 4);
+  for (let i = 0; i < 256; i++) {
+    const u = i / 255 * 2 - 1, t = Math.abs(u), to = u < 0 ? a : b;
+    for (let c = 0; c < 3; c++) px[4 * i + c] = Math.round(255 * (m[c] + (to[c] - m[c]) * t));
+    px[4 * i + 3] = 255;
+  }
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 256, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, px);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+}
+function initBrain() {
+  const canvas = $('brain'), gl = canvas.getContext('webgl2', { antialias: true });
+  if (!gl) {
+    $('brainNote').hidden = false;
+    $('brainNote').textContent = 'This browser has no WebGL 2, so the cortex cannot be drawn. The plots still work.';
+    return;
+  }
+  brain.gl = gl;
+  brain.draw = program(gl, VS, FS); brain.pick = program(gl, PICK_VS, PICK_FS);
+  brain.hemis = D.hemis.map(h => {
+    const pos = decode(h.positions, Float32Array), faces = decode(h.faces, TYPES[h.face_type]), par = decode(h.parcel, TYPES[h.parcel_type]);
+    const vao = gl.createVertexArray();
+    gl.bindVertexArray(vao);
+    [[pos, 0, 3], [vertexNormals(pos, faces), 1, 3], [parcelEdges(par, faces), 3, 1]].forEach(([a, loc, size]) => {
+      gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, a, gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0);
+    });
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, par, gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(2); gl.vertexAttribIPointer(2, 1, h.parcel_type === 'int16' ? gl.SHORT : gl.INT, 0, 0);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, faces, gl.STATIC_DRAW);
+    gl.bindVertexArray(null);
+    return { vao, count: faces.length, type: h.face_type === 'uint16' ? gl.UNSIGNED_SHORT : gl.UNSIGNED_INT, box: bounds(pos) };
+  });
+  // Parcel values live in a float texture the vertex shader reads, so a frame uploads one value per parcel
+  // and drawn series, each series in its own band of texture rows
+  brain.texW = Math.min(R, 2048); brain.texH = Math.ceil(R / brain.texW); brain.bands = ALL ? SIG.length : 1;
+  if (brain.texH * brain.bands > gl.getParameter(gl.MAX_TEXTURE_SIZE)) {
+    brain.gl = null; $('brainNote').hidden = false;
+    $('brainNote').textContent = 'This browser cannot hold every series on the cortex at once. The plots still work.';
+    return;
+  }
+  brain.vals = new Float32Array(brain.texW * brain.texH * brain.bands);
+  brain.valTex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, brain.valTex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, brain.texW, brain.texH * brain.bands, 0, gl.RED, gl.FLOAT, brain.vals);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  brain.lut = { diverging: gl.createTexture(), sequential: gl.createTexture() };
+  buildLuts();
+  // Every view at one scale, so the hemispheres keep their relative size
+  const span = k => Math.max(...brain.hemis.map(h => h.box[k + 3] - h.box[k]));
+  brain.aspect = span(1) / span(2);
+  canvas.addEventListener('pointermove', ev => { const r = canvas.getBoundingClientRect(); brain.pending = [ev.clientX - r.left, ev.clientY - r.top]; state.dirty = true; });
+  canvas.addEventListener('pointerleave', () => { brain.pending = null; state.hover = null; state.dirty = true; });
+  canvas.addEventListener('click', ev => {
+    const r = canvas.getBoundingClientRect(), p = pick(ev.clientX - r.left, ev.clientY - r.top);
+    if (p !== null && p.parcel !== null && p.parcel >= 0) selectParcel(p.parcel);
+  });
+  canvas.addEventListener('webglcontextlost', ev => {
+    ev.preventDefault(); brain.gl = null;
+    $('brainNote').hidden = false; $('brainNote').textContent = 'The browser stopped the cortex drawing. Reload the page to draw it again.';
+  });
+}
+function buildLuts() {
+  if (!brain.gl) return;
+  lutTexture(brain.gl, brain.lut.diverging, ['--neg', '--mid', '--pos']);
+  lutTexture(brain.gl, brain.lut.sequential, ['--seq-lo', '--seq-mid', '--seq-hi']);
+}
+const CELL_W = 140;  // the narrowest a grid cell gets, in CSS pixels
+function layoutBrain() {  // two by two, lateral views on top and medial views below; every series under its name in rows of four views or a grid of one
+  const wrap = $('brainwrap'), w = wrap.clientWidth, n = SIG.length;
+  const cols = ROWS ? 4 : GRID ? Math.max(1, Math.min(n, Math.floor(w / CELL_W))) : 2;
+  const rows = ROWS ? n : GRID ? Math.ceil(n / cols) : 2, strip = ALL ? 20 : 0;
+  const h = Math.round(rows * (strip + w / cols / ((brain.aspect || 1.5) * 1.04)));
+  if (wrap.style.height !== `${h}px`) wrap.style.height = `${h}px`;
+  if (ALL && brain.cols !== cols) {  // the names follow the same grid
+    brain.cols = cols; $('views').style.gridTemplateColumns = `repeat(${cols}, 1fr)`; $('views').style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+  }
+  const canvas = $('brain'), dpr = Math.min(devicePixelRatio || 1, 2);
+  const W = Math.max(1, Math.round(canvas.clientWidth * dpr)), H = Math.max(1, Math.round(canvas.clientHeight * dpr));
+  if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
+  return { cols, rows, W, H, dpr, strip: strip * dpr };
+}
+function viewport(L, i) {  // below the strip at the top of its row
+  const col = i % L.cols, row = Math.floor(i / L.cols);
+  const x0 = Math.round(col * L.W / L.cols), x1 = Math.round((col + 1) * L.W / L.cols);
+  const y0 = Math.round((L.rows - 1 - row) * L.H / L.rows), y1 = Math.round((L.rows - row) * L.H / L.rows - L.strip);
+  return [x0, y0, x1 - x0, y1 - y0];
+}
+function mvp(v, vw, vh) {  // orthographic camera on the x axis at side v.side, z up, framing all hemispheres alike
+  const a = vw / vh, need = Math.max(...brain.hemis.map(h => Math.max((h.box[4] - h.box[1]) / 2 / a, (h.box[5] - h.box[2]) / 2)));
+  const halfH = need * 1.04, halfW = halfH * a, b = brain.hemis[v.hemi].box, s = v.side;
+  const cx = (b[0] + b[3]) / 2, cy = (b[1] + b[4]) / 2, cz = (b[2] + b[5]) / 2, dh = (b[3] - b[0]) / 2 + 1;
+  // screen x = s (y - cy) / halfW, screen y = (z - cz) / halfH, depth = -s (x - cx) / dh; column-major
+  return new Float32Array([0, 0, -s / dh, 0, s / halfW, 0, 0, 0, 0, 1 / halfH, 0, 0, -s * cy / halfW, -cz / halfH, s * cx / dh, 1]);
+}
+function drawBrain() {
+  const gl = brain.gl;
+  if (!gl) return;
+  const L = brain.L = layoutBrain(), band = brain.texW * brain.texH;
+  (ALL ? SIG.map(s => s.index) : [state.show]).forEach((k, b) => {
+    const vals = VALS[k];
+    for (let r = 0; r < R; r++) brain.vals[b * band + r] = Number.isFinite(vals[r]) ? vals[r] : 1e30;  // 1e30 marks missing values
+  });
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, brain.valTex);
+  gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, brain.texW, brain.texH * brain.bands, gl.RED, gl.FLOAT, brain.vals);
+  const { p, u } = brain.draw;
+  gl.useProgram(p);
+  gl.uniform1i(u.uValues, 0); gl.uniform1i(u.uLut, 1); gl.uniform1i(u.uTexW, brain.texW);
+  gl.uniform3fv(u.uWall, rgb(token('--wall'))); gl.uniform3fv(u.uNoData, rgb(token('--nodata')));
+  gl.uniform1i(u.uSelected, state.parcel); gl.uniform3fv(u.uInk, rgb(token('--ink')));
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.disable(gl.SCISSOR_TEST); gl.viewport(0, 0, L.W, L.H);
+  const bg = rgb(token('--panel'));
+  gl.clearColor(bg[0], bg[1], bg[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS); gl.disable(gl.CULL_FACE);
+  CELLS.forEach((c, i) => {
+    const k = cellSignal(c), s = SIG[k], v = cellView(c), vp = viewport(L, i), hm = brain.hemis[v.hemi];
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, brain.lut[s.cmap]);
+    gl.uniform2f(u.uRange, s.limits[0], s.limits[1]); gl.uniform1i(u.uRow, ALL ? k * brain.texH : 0);
+    gl.viewport(...vp);
+    gl.uniformMatrix4fv(u.uMVP, false, mvp(v, vp[2], vp[3])); gl.uniform3f(u.uDir, v.side, 0, 0);
+    gl.bindVertexArray(hm.vao); gl.drawElements(gl.TRIANGLES, hm.count, hm.type, 0);
+  });
+  gl.bindVertexArray(null);
+}
+function pick(px, py) {  // what is under a point in CSS pixels: null outside the cells, else { parcel, cell } with parcel
+  // null for the background and -1 for unlabelled cortex
+  const gl = brain.gl, L = brain.L;
+  if (!gl || !L) return null;
+  const x = Math.floor(px * L.dpr), y = L.H - 1 - Math.floor(py * L.dpr);
+  const i = CELLS.findIndex((_, k) => { const [x0, y0, w, h] = viewport(L, k); return x >= x0 && x < x0 + w && y >= y0 && y < y0 + h; });
+  if (i < 0) return null;
+  if (!brain.fbo || brain.fboW !== L.W || brain.fboH !== L.H) {
+    if (brain.fbo) { gl.deleteFramebuffer(brain.fbo); gl.deleteRenderbuffer(brain.fboColor); gl.deleteRenderbuffer(brain.fboDepth); }
+    brain.fbo = gl.createFramebuffer(); brain.fboColor = gl.createRenderbuffer(); brain.fboDepth = gl.createRenderbuffer();
+    gl.bindRenderbuffer(gl.RENDERBUFFER, brain.fboColor); gl.renderbufferStorage(gl.RENDERBUFFER, gl.RGBA8, L.W, L.H);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, brain.fboDepth); gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, L.W, L.H);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, brain.fbo);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, brain.fboColor);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, brain.fboDepth);
+    brain.fboW = L.W; brain.fboH = L.H;
+  }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, brain.fbo);
+  const vp = viewport(L, i), v = cellView(CELLS[i]), hm = brain.hemis[v.hemi];
+  gl.viewport(...vp); gl.enable(gl.SCISSOR_TEST); gl.scissor(...vp);
+  gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); gl.disable(gl.SCISSOR_TEST);
+  gl.enable(gl.DEPTH_TEST);
+  gl.useProgram(brain.pick.p); gl.uniformMatrix4fv(brain.pick.u.uMVP, false, mvp(v, vp[2], vp[3]));
+  gl.bindVertexArray(hm.vao); gl.drawElements(gl.TRIANGLES, hm.count, hm.type, 0); gl.bindVertexArray(null);
+  const px4 = new Uint8Array(4);
+  gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px4);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  const id = px4[0] + 256 * px4[1] + 65536 * px4[2];
+  return { parcel: id === 0 ? null : id - 2, cell: CELLS[i] };
+}
+function showHover() {
+  const el = $('hover');
+  if (brain.pending) { state.hover = pick(...brain.pending); brain.pending = null; }
+  const p = state.hover;
+  if (p === null || p.parcel === null) { el.textContent = 'Hover the cortex to read a parcel’s value. Click a parcel to plot it.'; return; }
+  if (p.parcel < 0) { el.textContent = 'Unlabelled cortex (no parcel)'; return; }
+  const r = p.parcel, k = cellSignal(p.cell), group = GROUPS && GROUPS[r] ? ` · ${GROUPS[r]}` : '';
+  el.textContent = `${LABELS[r]}${group}${ALL ? ` in ${SIG[k].name}` : ''}: ${withUnit(VALS[k][r], SIG[k].unit)}`;
+}
+
+// ---------- plots: one row per chosen series, or every series on one axis ----------
+const sc = $('series'), sctx = sc.getContext('2d');
+const ROW_H = 118, OVERLAY_H = 300;
+function sizeCanvas(c, ctx) {
+  const dpr = Math.min(devicePixelRatio || 1, 2), w = c.clientWidth, h = c.clientHeight;
+  if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return [w, h];
+}
+function seriesGeometry(rows) {
+  const want = `${OVERLAY ? OVERLAY_H : Math.max(140, rows * ROW_H + 30)}px`;
+  if (sc.style.height !== want) sc.style.height = want;
+  const [w, h] = sizeCanvas(sc, sctx), left = 64, right = 14, top = 4, bottom = 24, gap = 14, title = 18;
+  const n = Math.max(1, rows), rowH = (h - top - bottom - gap * (n - 1) - title * n) / n;  // each row: a title strip, then data
+  return { w, h, left, right, top, bottom, gap, title, rowH, plotW: Math.max(10, w - left - right) };
+}
+function curve(s, r, t0, t1, plotW) {
+  // Dense series: the samples themselves. Sparse ones: the chosen interpolation every 2 px, so the plot
+  // shows what the cortex shows between samples. Either way the curve ends at the current value.
+  const pts = [];
+  if (plotW / WINDOW * s.tr < 3) {
+    const [ka, kb] = visible(s, t0, t1);
+    for (let k = ka; k <= kb; k++) pts.push([sampleTime(s, k), s.data[k * R + r]]);
+    pts.push([t1, VALS[s.index][r]]);
+  } else {
+    const n = Math.ceil(plotW / 2);
+    for (let i = 0; i <= n; i++) { const t = t0 + i / n * WINDOW; pts.push([t, valueAt(s, r, t)]); }
+  }
+  return pts;
+}
+function yRange(curves) {  // the values' range, a little wider so lines clear the frame
+  let lo = Infinity, hi = -Infinity;
+  for (const pts of curves) for (const [, v] of pts) if (v === v) { if (v < lo) lo = v; if (v > hi) hi = v; }
+  if (!Number.isFinite(lo)) { lo = -1; hi = 1; }
+  const mid = (lo + hi) / 2, half = Math.max((hi - lo) / 2, Math.abs(mid) * 1e-3, 1e-9) * 1.12;
+  return [mid - half, mid + half];
+}
+function frameRow(g, yt, y0, y1, lo, hi, ty, title, color) {  // baseline, zero, the title (keyed when color is given) and range
+  sctx.strokeStyle = token('--rule'); sctx.lineWidth = 1;
+  sctx.beginPath(); sctx.moveTo(g.left, y1 + .5); sctx.lineTo(g.left + g.plotW, y1 + .5); sctx.stroke();
+  if (lo < 0 && hi > 0) {
+    sctx.setLineDash([2, 3]); sctx.beginPath(); sctx.moveTo(g.left, Math.round(ty(0)) + .5); sctx.lineTo(g.left + g.plotW, Math.round(ty(0)) + .5); sctx.stroke(); sctx.setLineDash([]);
+  }
+  if (color) { sctx.strokeStyle = color; sctx.lineWidth = 2; sctx.beginPath(); sctx.moveTo(g.left, yt + 8.5); sctx.lineTo(g.left + 12, yt + 8.5); sctx.stroke(); }
+  sctx.fillStyle = token('--ink'); sctx.font = `600 11px ${token('--font')}`; sctx.textAlign = 'left';
+  sctx.fillText(title, g.left + (color ? 18 : 0), yt + 12);
+  sctx.fillStyle = token('--muted'); sctx.font = `10px ${token('--mono')}`; sctx.textAlign = 'right';
+  sctx.fillText(fmtAxis(hi, hi - lo), g.left - 6, y0 + 9); sctx.fillText(fmtAxis(lo, hi - lo), g.left - 6, y1);
+}
+function stroke(pts, tx, ty) {  // a path through the points, broken where values are missing
+  sctx.beginPath();
+  let pen = false;
+  for (const [t, v] of pts) {
+    if (v !== v) { pen = false; continue; }
+    pen ? sctx.lineTo(tx(t), ty(v)) : sctx.moveTo(tx(t), ty(v)); pen = true;
+  }
+  sctx.stroke();
+}
+function samples(s, r, t0, t1, g, tx, ty, color) {  // dots on the samples, when they are far enough apart to show where the data are
+  if (g.plotW / WINDOW * s.tr < 6) return;
+  const [ka, kb] = visible(s, t0, t1);
+  sctx.fillStyle = color; sctx.strokeStyle = token('--panel'); sctx.lineWidth = 1.5;
+  for (let k = ka; k <= kb; k++) {
+    const v = s.data[k * R + r], t = sampleTime(s, k);
+    if (v !== v || t < t0) continue;
+    sctx.beginPath(); sctx.arc(tx(t), ty(v), 2.8, 0, 2 * Math.PI); sctx.fill(); sctx.stroke();
+  }
+}
+function marker(x, y, color) {
+  sctx.beginPath(); sctx.arc(x, y, 4.5, 0, 2 * Math.PI);
+  sctx.fillStyle = token('--panel'); sctx.fill(); sctx.strokeStyle = color; sctx.lineWidth = 2; sctx.stroke();
+}
+function timeAxis(g, tx, tq) {  // seconds before the current moment, labels at least 64 px apart; the pointer's time
+  sctx.fillStyle = token('--muted'); sctx.font = `11px ${token('--mono')}`; sctx.textAlign = 'center';
+  const most = Math.max(2, Math.min(6, Math.floor(g.plotW / 64)));
+  const nice = [1, 2, 5, 10, 15, 20, 30, 60, 120, 300, 600, 1200, 1800, 3600].find(v => WINDOW / v <= most) || WINDOW / most;
+  for (let s = 0; s <= WINDOW + 1e-9; s += nice) {
+    const X = g.left + g.plotW - s / WINDOW * g.plotW;
+    sctx.fillText(s === 0 ? 'now' : `${MINUS}${+s.toFixed(2)} s`, Math.max(g.left + 14, X), g.h - 6);
+  }
+  if (tq !== null) {
+    const X = Math.round(tx(tq)) + .5;
+    sctx.strokeStyle = token('--muted'); sctx.lineWidth = 1;
+    sctx.beginPath(); sctx.moveTo(X, g.top); sctx.lineTo(X, g.h - g.bottom); sctx.stroke();
+  }
+}
+const hoverTime = (g, t0) => state.seriesHover === null ? null : t0 + (state.seriesHover.x - g.left) / g.plotW * WINDOW;
+// The series picked out: the one hovered on the cortex, or in an overlay the line nearest the pointer
+const focused = () => ALL && state.hover ? cellSignal(state.hover.cell) : state.near;
+function drawSeries() { if (OVERLAY) drawOverlay(); else drawRows(); }
+function drawRows() {
+  const rows = SIG.filter(s => state.plotted.has(s.index)), g = seriesGeometry(rows.length);
+  const t1 = state.t, t0 = t1 - WINDOW, r = state.parcel, tx = t => g.left + (t - t0) / WINDOW * g.plotW;
+  sctx.fillStyle = token('--panel'); sctx.fillRect(0, 0, g.w, g.h);
+  if (!rows.length) {
+    sctx.fillStyle = token('--muted'); sctx.font = `13px ${token('--font')}`; sctx.textAlign = 'center';
+    sctx.fillText('Choose a series above to plot it.', g.w / 2, g.h / 2);
+    $('readout').textContent = '';
+    return;
+  }
+  const tq = hoverTime(g, t0), read = [];
+  rows.forEach((s, ri) => {
+    const yt = g.top + ri * (g.title + g.rowH + g.gap), y0 = yt + g.title, y1 = y0 + g.rowH, pts = curve(s, r, t0, t1, g.plotW);
+    const [lo, hi] = yRange([pts]), ty = v => y1 - (v - lo) / (hi - lo) * g.rowH, color = lineColor(s);
+    frameRow(g, yt, y0, y1, lo, hi, ty, s.name + (s.unit ? ` (${s.unit})` : ''), color);
+    sctx.save(); sctx.beginPath(); sctx.rect(g.left, y0, g.plotW, g.rowH); sctx.clip();
+    sctx.strokeStyle = color; sctx.lineWidth = 2; sctx.lineJoin = 'round'; stroke(pts, tx, ty);
+    samples(s, r, t0, t1, g, tx, ty, color);
+    if (tq !== null) {
+      const v = valueAt(s, r, tq);
+      read.push([s, v]);
+      if (v === v) marker(tx(tq), ty(v), color);
+    }
+    sctx.restore();
+  });
+  timeAxis(g, tx, tq);
+  $('readout').textContent = tq === null ? 'Hover the plot to read the values at a moment.'
+    : `${fmt(tq - t1, 3)} s · ` + read.map(([s, v]) => `${s.name} ${withUnit(v, s.unit)}`).join(' · ');
+}
+function drawOverlay() {
+  const g = seriesGeometry(1), t1 = state.t, t0 = t1 - WINDOW, r = state.parcel, tx = t => g.left + (t - t0) / WINDOW * g.plotW;
+  sctx.fillStyle = token('--panel'); sctx.fillRect(0, 0, g.w, g.h);
+  const curves = SIG.map(s => curve(s, r, t0, t1, g.plotW)), [lo, hi] = yRange(curves), unit = SIG[0].unit;
+  const yt = g.top, y0 = yt + g.title, y1 = y0 + g.rowH, ty = v => y1 - (v - lo) / (hi - lo) * g.rowH;
+  frameRow(g, yt, y0, y1, lo, hi, ty, `${SIG.length} series${unit ? ` (${unit})` : ''}`, null);
+  const tq = hoverTime(g, t0);
+  state.near = null;
+  if (tq !== null) {
+    let best = Infinity;
+    SIG.forEach((s, k) => { const d = Math.abs(ty(valueAt(s, r, tq)) - state.seriesHover.y); if (d < best) { best = d; state.near = k; } });
+  }
+  const f = focused();
+  sctx.save(); sctx.beginPath(); sctx.rect(g.left, y0, g.plotW, g.rowH); sctx.clip();
+  sctx.lineWidth = 1.25; sctx.lineJoin = 'round'; sctx.globalAlpha = f === null ? .7 : .3;
+  curves.forEach((pts, k) => { if (k !== f) { sctx.strokeStyle = lineColor(SIG[k]); stroke(pts, tx, ty); } });
+  sctx.globalAlpha = 1;
+  if (f !== null) {  // on top, ringed in the panel's colour so it stands clear of the others
+    const s = SIG[f], color = HUE ? lineColor(s) : token('--ink'), v = tq === null ? NaN : valueAt(s, r, tq);
+    sctx.strokeStyle = token('--panel'); sctx.lineWidth = 5; stroke(curves[f], tx, ty);
+    sctx.strokeStyle = color; sctx.lineWidth = 2.5; stroke(curves[f], tx, ty);
+    samples(s, r, t0, t1, g, tx, ty, color);
+    if (v === v) marker(tx(tq), ty(v), color);
+  }
+  sctx.restore();
+  timeAxis(g, tx, tq);
+  if (f === null) $('readout').textContent = `Hover a line to pick it out and read it${ALL ? ', or the cortex to find a series’ line' : ''}.`;
+  else $('readout').textContent = `${tq === null ? 'now' : `${fmt(tq - t1, 3)} s`} · ${SIG[f].name}: ${withUnit(valueAt(SIG[f], r, tq ?? t1), SIG[f].unit)}`;
+}
+let marked = null;
+function markFocus() {  // outline the picked-out series' row or cell on the cortex
+  const f = ALL ? focused() : null;
+  if (f === marked) return;
+  const els = $('views').children;
+  if (marked !== null) els[marked].classList.remove('focus');
+  if (f !== null) els[f].classList.add('focus');
+  marked = f;
+}
+sc.addEventListener('pointermove', ev => {
+  const r = sc.getBoundingClientRect(), g = seriesGeometry(state.plotted.size), px = ev.clientX - r.left;
+  state.seriesHover = px >= g.left && px <= g.left + g.plotW ? { x: px, y: ev.clientY - r.top } : null;
+  state.dirty = true;
+});
+sc.addEventListener('pointerleave', () => { state.seriesHover = null; state.dirty = true; });
+
+// ---------- main loop ----------
+let last = null;
+function frame(now) {
+  const dt = last === null ? 0 : Math.min((now - last) / 1000, .1);
+  last = now;
+  if (state.playing) {
+    state.t += dt * state.speed;
+    if (state.t > T1) {
+      if (state.loop) state.t = T0 + (state.t - T1) % DUR;
+      else { state.t = T1; setPlaying(false); }
+    }
+  }
+  if (state.playing || state.dirty) {
+    state.dirty = false;
+    SIG.forEach((s, i) => sampleAll(s, state.t, VALS[i]));
+    drawBrain(); showHover(); drawSeries(); markFocus();
+    slider.value = state.t; $('clock').textContent = `${fmtClock(state.t)} of ${fmtClock(T1)}`;
+  }
+  requestAnimationFrame(frame);
+}
+function retheme() { tokens = {}; buildLuts(); paintKeys(); state.dirty = true; }
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', retheme);
+new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+initBrain();
+new ResizeObserver(() => { state.dirty = true; }).observe($('brainwrap'));
+new ResizeObserver(() => { state.dirty = true; }).observe(sc);
+updateScale(); paintKeys(); selectParcel(state.parcel); setPlaying(state.playing);
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
