@@ -39,8 +39,8 @@ page = pv.view({'BOLD': bold}, atlas, tr=0.8, units='%')
 page.save('bold.html')                   # or page.open(), or leave `page` last in a notebook cell
 ```
 
-Columns follow the atlas's parcel order. If your data is a pandas DataFrame whose columns are parcel names,
-parcelview matches the columns to the atlas by name.
+Columns follow the atlas's parcel order. If your data is a pandas or polars DataFrame whose columns are parcel
+names, parcelview matches the columns to the atlas by name.
 
 ## Atlases
 

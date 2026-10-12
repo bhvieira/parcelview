@@ -66,8 +66,12 @@ def _as_matrix(x, atlas: Atlas, name: str) -> np.ndarray:
         unknown = [c for c in cols if c not in index]
         if unknown:
             raise ValueError(f'signal {name!r} has columns that are not atlas parcels: {unknown[:5]}')
+        try:
+            values = x.to_numpy(dtype=float)
+        except TypeError:  # polars' to_numpy takes no dtype
+            values = np.asarray(x.to_numpy(), dtype=float)
         out = np.full((len(x), atlas.n_parcels), np.nan, np.float32)
-        out[:, [index[c] for c in cols]] = x.to_numpy(dtype=float)
+        out[:, [index[c] for c in cols]] = values
         return out
     a = np.asarray(x, dtype=np.float64)
     if a.ndim == 1 and atlas.n_parcels == 1:
@@ -111,7 +115,7 @@ def view(signals, atlas: Atlas, *, tr: float | Mapping[str, float], start: float
     """An interactive page that plays parcel time series on the cortex, with the time series of a chosen parcel.
 
     signals: a (time, parcel) array, or a mapping from name to such arrays. Columns follow the atlas's parcel
-        order; a pandas DataFrame is matched by column name.
+        order; a pandas or polars DataFrame is matched by column name.
     atlas: the parcellation (see Atlas).
     tr: seconds between samples, for all signals or per signal; signals may be sampled at different rates.
     start: time of each signal's first sample (s).

@@ -58,6 +58,29 @@ def test_dataframe_columns_are_matched(quadrants):
         pv.view(pd.DataFrame({'nope': [1.]}), quadrants, tr=1.)
 
 
+class Frame:
+    """A DataFrame like polars', whose to_numpy takes no dtype."""
+
+    def __init__(self, columns):
+        self.columns, self._values = list(columns), np.column_stack(list(columns.values()))
+
+    def __len__(self):
+        return len(self._values)
+
+    def to_numpy(self):
+        return self._values
+
+
+def test_other_dataframes_are_matched(quadrants):
+    p = payload(pv.view(Frame({'R_anterior_superior': [1, 2], 'L_posterior_inferior': [3., np.nan]}), quadrants, tr=2.))
+    d = floats(p['signals'][0]['data']).reshape(2, 8)
+    assert d[:, 7].tolist() == [1., 2.] and d[0, 0] == 3. and np.isnan(d[1, 0])
+    # pandas' nullable columns become NaN only when to_numpy is given the dtype
+    df = pd.DataFrame({'L_posterior_inferior': pd.array([1., None], dtype='Float64'), 'R_anterior_superior': [2., 3.]})
+    d = floats(payload(pv.view(df, quadrants, tr=2.))['signals'][0]['data']).reshape(2, 8)
+    assert d[0, 0] == 1. and np.isnan(d[1, 0]) and d[:, 7].tolist() == [2., 3.]
+
+
 def test_defaults(quadrants):
     x = np.zeros((20, 8))
     x[:, 5] = np.sin(np.arange(20))  # the most variable parcel shows first
