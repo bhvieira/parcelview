@@ -1,5 +1,10 @@
 # parcelview
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/opener-dark.webp">
+  <img src="docs/images/opener-light.webp" alt="A parcelview page playing one participant's fMRI as they watch a short film: the cortex in four views, coloured by each parcel's signal, beside the cleaned and band-passed signals of one parcel.">
+</picture>
+
 parcelview plays parcel time series on the cortex. You give it a parcellation and one or more `(time, parcel)`
 arrays, and it writes one HTML page that you can open in any modern browser, offline, or show in a notebook.
 
@@ -87,9 +92,9 @@ page = pv.view(
 )
 ```
 
-[`examples/movie_fmri.py`](examples/movie_fmri.py) builds a page from one participant of nilearn's
-development dataset, in which participants watched a short film: the cleaned BOLD signal and a band-passed copy,
-in Schaefer-100 parcels.
+[`examples/movie_fmri.py`](examples/movie_fmri.py) builds the page shown at the top of this README, from one
+participant of nilearn's development dataset, in which participants watched a short film: the cleaned BOLD
+signal and a band-passed copy, in Schaefer-100 parcels.
 
 ## Several series side by side
 
@@ -117,12 +122,24 @@ scale beside the plot:
 page = pv.view(participants, atlas, tr=2.0, cortex='grid', hue=ages, hue_label='Age (years)')
 ```
 
-These examples use nilearn's development dataset:
+The following examples use nilearn's development dataset. Each image shows the top of the page, 144 s into the
+film.
 
-- [`examples/movie_adults.py`](examples/movie_adults.py) draws eight adults in rows, ordered by a hierarchical
-  clustering so that alike adults sit together, and opens the plots on the parcel where they agree most.
-- [`examples/movie_ages.py`](examples/movie_ages.py) draws 24 children and 24 adults in a grid, youngest
-  first, and overlays their series coloured by age.
+[`examples/movie_adults.py`](examples/movie_adults.py) draws eight adults in rows, ordered by a hierarchical
+clustering so that alike adults sit together, and opens the plots on the parcel where they agree most:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/adults-dark.webp">
+  <img src="docs/images/adults-light.webp" alt="Eight adults' cortex, one row of four views each, beside one parcel's signal for each adult, one row of the plot per adult.">
+</picture>
+
+[`examples/movie_ages.py`](examples/movie_ages.py) draws 24 children and 24 adults in a grid, youngest first,
+and overlays their series coloured by age:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/ages-dark.webp">
+  <img src="docs/images/ages-light.webp" alt="A grid of 48 left lateral views of the cortex, one per participant from 3 to 39 years old, beside one parcel's 48 signals overlaid on one axis, each line coloured by the participant's age.">
+</picture>
 
 `view` takes these other options:
 
