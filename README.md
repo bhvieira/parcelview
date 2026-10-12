@@ -25,8 +25,10 @@ the same parcels.
 
 ## Install
 
+Install parcelview from GitHub:
+
 ```
-pip install parcelview
+pip install git+https://github.com/bhvieira/parcelview
 ```
 
 parcelview needs Python 3.10 or later, with NumPy, nibabel, and nilearn. The page needs a browser with
