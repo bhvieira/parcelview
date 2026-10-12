@@ -92,9 +92,9 @@ page = pv.view(
 )
 ```
 
-[`examples/movie_fmri.py`](examples/movie_fmri.py) builds the page shown at the top of this README, from one
-participant of nilearn's development dataset, in which participants watched a short film: the cleaned BOLD
-signal and a band-passed copy, in Schaefer-100 parcels.
+[`examples/movie_fmri.py`](examples/movie_fmri.py) builds the page shown at the top of this README: one
+participant from the [Partly Cloudy dataset](#data-in-the-examples) of Richardson et al. (2018), watching a short
+film, with the cleaned BOLD signal and a band-passed copy in Schaefer-100 parcels.
 
 ## Several series side by side
 
@@ -122,8 +122,8 @@ scale beside the plot:
 page = pv.view(participants, atlas, tr=2.0, cortex='grid', hue=ages, hue_label='Age (years)')
 ```
 
-The following examples use nilearn's development dataset. Each image shows the top of the page, 144 s into the
-film.
+The following examples use the same [dataset](#data-in-the-examples). Each image shows the top of the page, 144 s
+into the film.
 
 [`examples/movie_adults.py`](examples/movie_adults.py) draws eight adults in rows, ordered by a hierarchical
 clustering so that alike adults sit together, and opens the plots on the parcel where they agree most:
@@ -174,6 +174,21 @@ The page has these controls:
   left lateral, right lateral, left medial, right medial), and the interpolation.
 
 The page follows the system's light or dark theme.
+
+## Data in the examples
+
+The examples, and the images in this README, use MRI data that Richardson et al. (2018) collected from children
+aged 3 to 12 and from adults as they watched Pixar's short film *Partly Cloudy*. The original data are on
+OpenNeuro as [ds000228, version 1.0.0](https://doi.org/10.18112/openneuro.ds000228.v1.0.0), released under the
+[Open Data Commons Public Domain Dedication and License](https://opendatacommons.org/licenses/pddl/). The
+examples download nilearn's copy through `nilearn.datasets.fetch_development_fmri`, which is
+[preprocessed and downsampled to 4 mm](https://osf.io/wjtyq/). nilearn's description of its copy says that use
+is unrestricted for non-commercial research.
+
+If you use these data, cite the paper, as the dataset asks:
+
+> Richardson, H., Lisandrelli, G., Riobueno-Naylor, A., & Saxe, R. (2018). Development of the social brain from
+> age three to twelve years. *Nature Communications*, 9, 1027. https://doi.org/10.1038/s41467-018-03399-2
 
 ## License
 

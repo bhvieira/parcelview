@@ -10,6 +10,11 @@ across people. The rows follow a hierarchical clustering of the adults (average 
 two adults' similarity is the correlation of their signals in time, averaged over parcels), so alike adults sit
 together. The plots open on the parcel where the adults agree most: the highest mean correlation between each
 adult and the average of the others.
+
+The data are from Richardson et al. (2018), shared on OpenNeuro as ds000228
+(https://doi.org/10.18112/openneuro.ds000228.v1.0.0). If you use them, cite:
+    Richardson, H., Lisandrelli, G., Riobueno-Naylor, A., & Saxe, R. (2018). Development of the social brain from
+    age three to twelve years. Nature Communications, 9, 1027. https://doi.org/10.1038/s41467-018-03399-2
 """
 import argparse
 
@@ -72,7 +77,8 @@ def main():
     page = pv.view(series, atlas, tr=tr, units='z', cortex='rows', selected=names[np.argmax(agree)], speed=4,
                    title=f'{len(series)} adults watching the same film',
                    description="nilearn's development dataset, watching Partly Cloudy, averaged in Schaefer-100 "
-                               'parcels; confounds regressed out, band-passed to 0.01-0.1 Hz, z-scored.')
+                               'parcels; confounds regressed out, band-passed to 0.01-0.1 Hz, z-scored.'
+                               ' Data: Richardson et al. (2018), Nature Communications 9, 1027; OpenNeuro ds000228.')
     print(page.save(args.out), page)
 
 

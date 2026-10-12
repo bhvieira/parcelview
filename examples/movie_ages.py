@@ -13,6 +13,11 @@ agree most: the highest mean correlation between each participant and the averag
 
 nilearn's fetcher takes the first children by ID, who are the youngest, so this picks participants from its table
 and downloads them with the fetcher's per-participant helper, which is private to nilearn.
+
+The data are from Richardson et al. (2018), shared on OpenNeuro as ds000228
+(https://doi.org/10.18112/openneuro.ds000228.v1.0.0). If you use them, cite:
+    Richardson, H., Lisandrelli, G., Riobueno-Naylor, A., & Saxe, R. (2018). Development of the social brain from
+    age three to twelve years. Nature Communications, 9, 1027. https://doi.org/10.1038/s41467-018-03399-2
 """
 import argparse
 from pathlib import Path
@@ -86,7 +91,8 @@ def main():
                    description=f"nilearn's development dataset: {len(kids)} children ({int(kids.min())} to "
                                f'{int(kids.max())} years old) and {len(grown)} adults ({int(grown.min())} to '
                                f'{int(grown.max())}) watching Partly Cloudy, youngest first, averaged in Schaefer-100 '
-                               'parcels; confounds regressed out, band-passed to 0.01-0.1 Hz, z-scored.')
+                               'parcels; confounds regressed out, band-passed to 0.01-0.1 Hz, z-scored.'
+                               ' Data: Richardson et al. (2018), Nature Communications 9, 1027; OpenNeuro ds000228.')
     print(page.save(args.out), page)
 
 

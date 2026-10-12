@@ -6,6 +6,11 @@ In the development dataset, participants watched Pixar's "Partly Cloudy" during 
 preprocessed run (MNI space, TR 2 s, about 6 minutes) and the volumetric Schaefer atlas, averages the BOLD signal
 in each parcel, and regresses out the confounds that come with the run. The page holds two series, both z-scored:
 the cleaned signal, and the same signal band-passed to 0.01-0.1 Hz.
+
+The data are from Richardson et al. (2018), shared on OpenNeuro as ds000228
+(https://doi.org/10.18112/openneuro.ds000228.v1.0.0). If you use them, cite:
+    Richardson, H., Lisandrelli, G., Riobueno-Naylor, A., & Saxe, R. (2018). Development of the social brain from
+    age three to twelve years. Nature Communications, 9, 1027. https://doi.org/10.1038/s41467-018-03399-2
 """
 import argparse
 
@@ -31,7 +36,8 @@ def main():
     atlas = pv.Atlas.schaefer(100).reorder(names)
     page = pv.view(series, atlas, tr=tr, units='z', speed=4, title='Watching a short film, one participant',
                    description="nilearn's development dataset, watching Partly Cloudy, averaged in Schaefer-100 "
-                               'parcels; confounds regressed out, z-scored.')
+                               'parcels; confounds regressed out, z-scored.'
+                               ' Data: Richardson et al. (2018), Nature Communications 9, 1027; OpenNeuro ds000228.')
     print(page.save(args.out), page)
 
 
