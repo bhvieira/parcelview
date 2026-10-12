@@ -82,6 +82,10 @@ def _as_matrix(x, atlas: Atlas, name: str) -> np.ndarray:
         raise ValueError(f'signal {name!r} has no samples')
     if np.isinf(a).any():
         raise ValueError(f'signal {name!r} has infinite values (use NaN for missing ones)')
+    if len(a) == atlas.n_parcels > 1:
+        warnings.warn(f'signal {name!r} has as many samples as parcels ({len(a)}), so its orientation cannot be '
+                      f'checked; rows are read as time points (a DataFrame with parcel names as columns is matched '
+                      f'by name)', stacklevel=3)
     return a.astype(np.float32)
 
 
@@ -172,7 +176,9 @@ def view(signals, atlas: Atlas, *, tr: float | Mapping[str, float], start: float
     unknown = sorted(set(plot) - set(names))
     if unknown:
         raise ValueError(f'plot names signals that do not exist: {unknown}')
-    data = {n: _as_matrix(x, atlas, n) for n, x in zip(names, signals.values())}
+    data = {}
+    for n, x in zip(names, signals.values()):  # not a comprehension, whose frame would shift warnings' stacklevel
+        data[n] = _as_matrix(x, atlas, n)
 
     trs, starts = _per_signal(tr, names, 'tr'), _per_signal(start, names, 'start', 0.)
     for n in names:

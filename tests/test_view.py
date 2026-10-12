@@ -1,6 +1,7 @@
 import base64
 import json
 import re
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -79,6 +80,15 @@ def test_other_dataframes_are_matched(quadrants):
     df = pd.DataFrame({'L_posterior_inferior': pd.array([1., None], dtype='Float64'), 'R_anterior_superior': [2., 3.]})
     d = floats(payload(pv.view(df, quadrants, tr=2.))['signals'][0]['data']).reshape(2, 8)
     assert d[0, 0] == 1. and np.isnan(d[1, 0]) and d[:, 7].tolist() == [2., 3.]
+
+
+def test_square_arrays_warn(quadrants):
+    with pytest.warns(UserWarning, match='orientation cannot be checked') as record:
+        pv.view({'a': np.zeros((8, 8)), 'b': np.zeros((5, 8))}, quadrants, tr=1.)
+    assert len(record) == 1 and "'a'" in str(record[0].message) and record[0].filename == __file__
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        pv.view(pd.DataFrame(np.zeros((8, 8)), columns=quadrants.names), quadrants, tr=1.)
 
 
 def test_defaults(quadrants):
